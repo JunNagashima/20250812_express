@@ -32,13 +32,6 @@ export const handler: ScheduledHandler = async (
     const message = getRandomMessage();
     console.log('Selected message:', message);
 
-    // ここに定期実行したい処理を記述
-    // 例：
-    // - データベースのクリーンアップ
-    // - 外部APIへのデータ送信
-    // - レポートの生成
-    // - ファイルの処理など
-
     const timestamp = new Date().toISOString();
     console.log(`処理実行時刻: ${timestamp}`);
 
