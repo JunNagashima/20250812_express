@@ -1,3 +1,7 @@
+# "org" ensures this Service is used with the correct Serverless Framework Access Key.
+org: nagashima510
+# "app" enables Serverless Framework Dashboard features and sharing them with other Services.
+app: express-20250812
 service: express-serverless
 
 provider:
@@ -7,11 +11,15 @@ provider:
   region: ap-northeast-1
 
 functions:
-  postScheduled:
-    handler: handler.handler
+  scheduledTask:
+    handler: dist/index.handler
+    description: 定期実行Lambda関数
     events:
       - schedule:
+          name: scheduled-task-every-minute
+          description: '毎分実行されるタスク'
           rate: rate(1 minute)
+          enabled: true
           input:
             message: "Hello, this is a scheduled event!"
 

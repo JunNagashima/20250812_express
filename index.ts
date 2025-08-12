@@ -1,30 +1,90 @@
-import express, { type Request, type Response } from "express";
-import serverless from "serverless-http";
-import dotenv from "dotenv";
+import type { ScheduledEvent, Context, ScheduledHandler } from 'aws-lambda';
+import { createClient } from '@supabase/supabase-js';
+import { getRandomMessage } from './constants.js';
+import dotenv from 'dotenv';
 
-// アプリケーションで動作するようにdotenvを設定する
+// 環境変数を読み込み
 dotenv.config();
-const app = express();
 
-const PORT = process.env.PORT || 3000;
+// Supabaseクライアントの初期化
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_ANON_KEY;
 
-app.get("/", (request: Request, response: Response) => {
-  response.status(200).send("Hello World");
-});
+if (!supabaseUrl || !supabaseKey) {
+  throw new Error('SUPABASE_URL and SUPABASE_ANON_KEY must be provided');
+}
 
-app.post("/", (request: Request, response: Response) => {
-  response.status(200).json({ message: "POST request successful" });
-});
+const supabase = createClient(supabaseUrl, supabaseKey);
 
-// For serverless deployment
-export const handler = serverless(app);
+/**
+ * 定期実行されるLambda関数のハンドラー
+ */
+export const handler: ScheduledHandler = async (
+  event: ScheduledEvent,
+  context: Context
+): Promise<void> => {
+  console.log('定期実行Lambda開始');
+  console.log('Event:', JSON.stringify(event, null, 2));
+  console.log('Context:', JSON.stringify(context, null, 2));
 
-// For local development
-if (process.env.NODE_ENV !== 'production') {
-  app.listen(PORT, () => {
-    console.log("Server running at PORT: ", PORT);
-  }).on("error", (error) => {
-    // エラーの処理
-    throw new Error(error.message);
-  });
+  try {
+    // ランダムなメッセージを取得
+    const message = getRandomMessage();
+    console.log('Selected message:', message);
+
+    // ここに定期実行したい処理を記述
+    // 例：
+    // - データベースのクリーンアップ
+    // - 外部APIへのデータ送信
+    // - レポートの生成
+    // - ファイルの処理など
+
+    const timestamp = new Date().toISOString();
+    console.log(`処理実行時刻: ${timestamp}`);
+
+    // 実際の処理をここに実装
+    await performScheduledTask(message);
+
+    console.log('定期実行Lambda正常終了');
+  } catch (error) {
+    console.error('エラーが発生しました:', error);
+    throw error; // CloudWatchにエラーを記録
+  }
+};
+
+/**
+ * 定期実行する実際のタスク
+ */
+async function performScheduledTask(message: string): Promise<void> {
+  console.log('定期タスクを実行中...');
+
+  // Supabaseのlogテーブルにメッセージをinsert
+  const { data, error } = await supabase
+    .from('log')
+    .insert([
+      {
+        message: message
+      }
+    ]);
+
+  if (error) {
+    console.error('Supabaseへのinsertでエラーが発生:', error);
+    throw error;
+  }
+
+  console.log('Supabaseにログを挿入しました:', data);
+
+  // 例: 外部APIを呼び出す
+  // const response = await fetch('https://api.example.com/data');
+  // const data = await response.json();
+  // console.log('API Response:', data);
+
+  // 例: 環境変数を使用
+  const environment = process.env.NODE_ENV || 'development';
+  console.log(`環境: ${environment}`);
+
+  // 処理の完了をシミュレート
+  await new Promise(resolve => setTimeout(resolve, 1000));
+
+  console.log('定期タスク完了');
 }
